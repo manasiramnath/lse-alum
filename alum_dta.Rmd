@@ -8,22 +8,186 @@ date: "2023-10-16"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Load libraries
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+#Interactive chart package
+library(plotly)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+library(shadowtext)
+library(grid)
+library(forcats)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+## Importing datasets
+```{r}
+employers <- read.csv('employers.csv')
+# clean column names
+# removing X in front of years
+  #employers <- employers %>%
+  #rename_all(~sub("^X", "", .))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+# subset to 2022
+e <- employers %>%
+  select(company, category, `X2022`)
+```
+
+# Latest year data: Where do they work?
+
+```{r}
+# Create a horizontal bar chart
+library(ggplot2)
+
+# Define the desired order of categories
+desired_category_order <- c("Education", "Finance", "Big4", "Big3", "Tech")
+
+colors <- c('#d73027','#fc8d59','#fee090','#91bfdb','#4575b4')
+
+
+# Reorder the data frame based on the desired category order
+e <- e %>%
+  arrange(factor(category, levels = rev(desired_category_order)), desc(X2022)) %>%
+  mutate(company = factor(company, levels = unique(company)))  # Update factor levels
+
+# Create the horizontal bar chart with color-coded categories
+jpeg(file="employers_2022.jpeg")
+ggplot(e, aes(x = company, y = X2022, fill = category)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = X2022), hjust = -0.1, vjust = 0.5, size = 2.5) +
+  scale_fill_manual(values = colors) +
+  coord_flip() +
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  xlab("") +
+  ylab("") +
+  labs(title = "Where do they work?", subtitle = "LSE is the top employer among 2022 graduates", fill = "Category")
+dev.off()
+```
+
+# How has this changed over the years?
+```{r}
+library(ggplot2)
+library(gganimate)
+library(reshape2)
+
+
+employers_long <- melt(employers, id.vars = c("company", "category")) 
+employers_long <- employers_long[employers_long$variable != "all_years", ]
+# Finance
+finance <- employers_long[employers_long$category == "Finance", ]
+finance = subset(finance, select = -c(category) )
+
+# Big 3
+big3 <- employers_long[employers_long$category == "Big3", ]
+big3 = subset(big3, select = -c(category) )
+
+# Big 4
+big4 <- employers_long[employers_long$category == "Big4", ]
+big4 = subset(big4, select = -c(category) )
+
+# Tech
+tech <- employers_long[employers_long$category == "Tech", ]
+tech = subset(tech, select = -c(category) )
+
+# Education
+edu <- employers_long[employers_long$category == "Education", ]
+edu = subset(edu, select = -c(category) )
+
+categories <- unique(employers_long$category)
+
+```
+
+```{r}
+library(ggplot2)
+
+colors_finance <- c("#2298ff", "#4e7ad6", "#7a5bad", "#a73d85", "#d31e5c", "#ff0033")
+custom_labels <- c("2017", "2018", "2019", "2020", "2021", "2022", "2023")
+
+# Create a line graph showing the change in the number of alumni in each company over time
+jpeg(file="finance_ot.jpeg")
+ggplot(finance, aes(x = variable, y = value, color = company)) +
+  geom_point() +
+  geom_line(aes(group = company)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  scale_color_manual(values = colors_finance) +
+  xlab("Year") +
+  ylab("Number of Alumni") +
+  labs(title = "Change in Number of Alumni Over Time", color = 'Finance') +
+  scale_x_discrete(limits = rev(unique(finance$variable)), labels = custom_labels)
+dev.off()
+```
+```{r}
+colors_big3 <- c("#ff3d64", "#ff7e94", "#ffbfc3")
+custom_labels <- c("2017", "2018", "2019", "2020", "2021", "2022", "2023")
+
+# Create a line graph showing the change in the number of alumni in each company over time
+jpeg(file="big3_ot.jpeg")
+ggplot(big3, aes(x = variable, y = value, color = company)) +
+  geom_point() +
+  geom_line(aes(group = company)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  scale_color_manual(values = colors_big3) +
+  xlab("Year") +
+  ylab("Number of Alumni") +
+  labs(title = "Change in Number of Alumni Over Time", color = 'Big 3') +
+  scale_x_discrete(limits = rev(unique(big3$variable)), labels = custom_labels)
+dev.off()
+```
+```{r}
+colors_big4 <- c("#ffbd7a", "#ff9d51", "#ff7e29", "#ff5e00")
+
+# Create a line graph showing the change in the number of alumni in each company over time
+jpeg(file="big4_ot.jpeg")
+ggplot(big4, aes(x = variable, y = value, color = company)) +
+  geom_point() +
+  geom_line(aes(group = company)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  scale_color_manual(values = colors_big4) +
+  xlab("Year") +
+  ylab("Number of Alumni") +
+  labs(title = "Change in Number of Alumni Over Time", color = 'Big 4') +
+  scale_x_discrete(limits = rev(unique(big4$variable)), labels = custom_labels)
+dev.off()
+```
+```{r}
+colors_tech <-c('#40004b','#762a83','#af8dc3','#7fbf7b','#1b7837')
+jpeg(file="tech_ot.jpeg")
+ggplot(tech, aes(x = variable, y = value, color = company)) +
+  geom_point() +
+  geom_line(aes(group = company)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  scale_color_manual(values = colors_tech) +
+  xlab("Year") +
+  ylab("Number of Alumni") +
+  labs(title = "Change in Number of Alumni Over Time", color = 'Tech') +
+  scale_x_discrete(limits = rev(unique(tech$variable)), labels = custom_labels)
+dev.off()
+```
+```{r}
+colors_edu <- c('#67001f','#b2182b','#d6604d','#f4a582','#4d4d4d')
+jpeg(file="edu_ot.jpeg")
+ggplot(edu, aes(x = variable, y = value, color = company)) +
+  geom_point() +
+  geom_line(aes(group = company)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  scale_color_manual(values = colors_edu) +
+  xlab("Year") +
+  ylab("Number of Alumni") +
+  labs(title = "Change in Number of Alumni Over Time", color = 'Education') +
+  scale_x_discrete(limits = rev(unique(edu$variable)), labels = custom_labels)
+dev.off()
+```
+
+
